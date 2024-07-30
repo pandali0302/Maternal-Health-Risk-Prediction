@@ -17,3 +17,8 @@ mpl.rcParams["ytick.color"] = "black"
 mpl.rcParams["font.size"] = 12
 mpl.rcParams["figure.titlesize"] = 25
 mpl.rcParams["figure.dpi"] = 100
+
+
+import seaborn as sns
+
+sns.set_style("whitegrid")

@@ -1,61 +1,14 @@
-# ----------------------------------------------------------------
-# Install Library
-# ----------------------------------------------------------------
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from dataprep.eda import plot
-from dataprep.eda import plot_correlation
-from dataprep.eda import create_report
-
 import pylab
 import scipy.stats as stats
-from scipy.stats import chi2_contingency, boxcox
-
-from statsmodels.formula.api import ols
-from statsmodels.stats.anova import anova_lm
-
-import warnings
-
-warnings.filterwarnings("ignore")
 
 # ----------------------------------------------------------------
-# Load Data
+# # Univariate Analysis
 # ----------------------------------------------------------------
-data = pd.read_csv("../../data/interim/02_data_no_outliers.csv")
-data.info()
-data.describe()
-data.head()
-
-# ----------------------------------------------------------------
-# EDA with dataprep library
-# https://docs.dataprep.ai/user_guide/eda/plot.html
-# ----------------------------------------------------------------
-df = data[["Age", "SystolicBP", "DiastolicBP", "BS", "HeartRate", "RiskLevel"]]
-plot(df)
-# plot_missing(data)
-plot_correlation(data)
-plot(df, "age")
-
-
-report = create_report(df, title="My Report")
-report.show_browser()
-report.save(filename="stat_report_01", to="../../reports/figures")
-
-# ----------------------------------------------------------------
-# EDA with seaborn library
-# ----------------------------------------------------------------
-# set plot configurations
-sns.set_style("whitegrid")
-
-df = data.copy()
-
-cat_cols = df.select_dtypes(include=["object"]).columns
-num_cols = df.select_dtypes(include=["int64", "float64"]).columns
-
-# Univariate Analysis
 """
 For Numerical variables:
 column statistics, histogram, kde plot, qq-normal plot, box plot
@@ -63,9 +16,6 @@ column statistics, histogram, kde plot, qq-normal plot, box plot
 For Categorical variables:
 column statistics, count plot, bar plot, pie chart, pie chart, word cloud, word frequencies
 """
-
-sns.pairplot(df)
-sns.pairplot(df, hue="RiskLevel")
 
 
 def UVA_numeric(data):
@@ -156,7 +106,9 @@ univariate(df[num_cols], vartype=0)
 univariate(df[cat_cols], vartype=1)
 
 
+# ----------------------------------------------------------------
 # Bivariate analysis
+# ----------------------------------------------------------------
 """"
 Categorical x categorical
 
@@ -197,46 +149,22 @@ def Bivariate(df, x, y):
     plt.show()
 
 
-Bivariate(df, "RiskLevel", "DiastolicBP")
+Bivariate(df, "RiskLevel", "Age")
 
 
+# ----------------------------------------------------------------
 # correlation analysis
+# ----------------------------------------------------------------
 def correlation_plot(data):
     plt.figure(figsize=(15, 8), dpi=100)
     sns.heatmap(data.corr(), annot=True, cmap="coolwarm", center=0)
     plt.title("Correlation Plot")
-    # plt.savefig("../../reports/figures/01_correlation_plot.png")
     plt.show()
 
 
-correlation_plot(df[num_cols])
-
-
-# convert RishLevel to numeric
-df["RiskLevel"] = df["RiskLevel"].map({"low risk": 0, "mid risk": 1, "high risk": 2})
-
-correlation_plot(df)
-
-
 # ----------------------------------------------------------------
-# skew transformations
+# plot skewness
 # ----------------------------------------------------------------
-"""
-The range of skewness for a fairly symmetrical bell curve distribution is between -0.5 and 0.5; 
-moderate skewness is -0.5 to -1.0 and 0.5 to 1.0; 
-and highly skewed distribution is < -1.0 and > 1.0.
-"""
-# define a limit above which we will log transform
-skew_limit = 0.75
-
-# Create a list of numerical colums to check for skewing
-cols = [col for col in df.columns if col != "RiskLevel"]
-skew_vals = df[cols].skew()
-
-# show the columns with skewness above the limit
-skew_cols = skew_vals[skew_vals > skew_limit].index.tolist()
-
-
 # plot histplot and Q-Q plot for each feature
 def normality(data, feature):
     plt.figure(figsize=(10, 5))
@@ -248,46 +176,3 @@ def normality(data, feature):
 
 
 normality(df[cols], "BS")
-
-
-"""
-- the distribution of BodyTemp column makes it impossible to transform it to a normal distribution (most of the rows have the same value, which is the minimum of the column), so we will not change it.
-
-- But we can transform our Blood Sugar and Age columns, so they look more normally distributed. Depends on the shape of the distribution, we can use different common transformations to make features be normally distributed:
-
-    Log
-    Square root
-    Box cox
-
-"""
-df_transformed = df.copy()
-df_transformed["Age"] = np.log(df["Age"])
-# apply  box cox transformation for column BS
-df_transformed["BS"] = stats.boxcox(df["BS"])[0]
-
-normality(df_transformed[cols], "Age")
-df_transformed[cols].skew()
-
-df_transformed.head()
-
-
-# ----------------------------------------------------------------
-# export the results to a file
-# ----------------------------------------------------------------
-df.to_csv("../../data/interim/03_data_non_skewed.csv", index=False)
-
-"""
-Observations from visualizations above:¶
-
-- BS (blood sugar) and BodyTemp (body temperature) are highly skewed.They both have a longer tail to the right, so we call it a positive skew. 
-
-- The low risk pregnancies are the most frequent overall, they happen in more than half of the cases.
-- Younger women tend to have low and mid risk pregnancies, while the pregnancies of women above 35 y.o. more often are classified as high risk, thus, need more attention.
-- If a pregnant woman has a blood sugar higher than 8 mmol/L, in most of the cases, the pregnancy is considered high risk.
-- Higher blood pressure (both systolic and diastolic), higher body temperature are associated with higher risk pregnancies.
-- no obvious correlation between heart rate and risk level.
-
-
--  there is only one highly correlated variable, which is BS (blood sugar). The rest of the variables have some positive correlation, but not so strong. If we had a lot of variables, we could select only highly correlated ones for future analysis. But because we have only 7 columns, we will use all of them.
-
-"""

@@ -55,7 +55,7 @@ for col in num_cols:
 Observations from Initial Data Exploration:
 
 - there are 1014 rows and 7 features, 1 target (RiskLevel)
-- only "RiskLevel" is categorical, need to be encoded
+- "RiskLevel" is categorical, need to be encoded
 - no missing values
 - duplicats exceed half of the data, need to be handled
 - Range of age is from 10 till 70 years old. Even though it's uncommon, it is possible.
@@ -80,14 +80,6 @@ df = df.drop_duplicates(keep="first").reset_index(drop=True)
 # fix heart rate column, replace value 7 with the mode of the column
 # df["HeartRate"].value_counts()
 df["HeartRate"].replace(7, df["HeartRate"].mode()[0], inplace=True)
-
-# ----------------------------------------------------------------
-# Feature Encoding for categorical variables
-# ----------------------------------------------------------------
-# df.RiskLevel.unique()
-
-le = LabelEncoder()
-df["RiskLevel"] = le.fit_transform(df["RiskLevel"])
 
 # ----------------------------------------------------------------
 # Save the cleaned data and export it to csv

@@ -45,7 +45,7 @@ plt.show()
 """
 Whether to remove or keep them greatly depends on the understanding of our data and the type of analysis to be performed. In this case, the points that are outside of our box plots might be the actual true data points and do not need to be removed.
 """
-
+data.info()
 # ----------------------------------------------------------------
 # export to csv file
 # ----------------------------------------------------------------
