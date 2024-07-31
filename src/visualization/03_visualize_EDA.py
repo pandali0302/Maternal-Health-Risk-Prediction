@@ -12,10 +12,6 @@ from dataprep.eda import create_report
 
 import pylab
 import scipy.stats as stats
-from scipy.stats import chi2_contingency, boxcox
-
-from statsmodels.formula.api import ols
-from statsmodels.stats.anova import anova_lm
 
 import warnings
 
@@ -28,6 +24,7 @@ data = pd.read_csv("../../data/interim/02_data_no_outliers.csv")
 data.info()
 data.describe()
 data.head()
+data.columns
 
 # ----------------------------------------------------------------
 # EDA with dataprep library
@@ -248,6 +245,7 @@ def normality(data, feature):
 
 
 normality(df[cols], "BS")
+normality(df[cols], "Age")
 
 
 """
@@ -275,19 +273,3 @@ df_transformed.head()
 # export the results to a file
 # ----------------------------------------------------------------
 df.to_csv("../../data/interim/03_data_non_skewed.csv", index=False)
-
-"""
-Observations from visualizations above:¶
-
-- BS (blood sugar) and BodyTemp (body temperature) are highly skewed.They both have a longer tail to the right, so we call it a positive skew. 
-
-- The low risk pregnancies are the most frequent overall, they happen in more than half of the cases.
-- Younger women tend to have low and mid risk pregnancies, while the pregnancies of women above 35 y.o. more often are classified as high risk, thus, need more attention.
-- If a pregnant woman has a blood sugar higher than 8 mmol/L, in most of the cases, the pregnancy is considered high risk.
-- Higher blood pressure (both systolic and diastolic), higher body temperature are associated with higher risk pregnancies.
-- no obvious correlation between heart rate and risk level.
-
-
--  there is only one highly correlated variable, which is BS (blood sugar). The rest of the variables have some positive correlation, but not so strong. If we had a lot of variables, we could select only highly correlated ones for future analysis. But because we have only 7 columns, we will use all of them.
-
-"""
