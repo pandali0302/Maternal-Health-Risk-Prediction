@@ -19,8 +19,6 @@ The order of these steps can influence the final model performance and efficienc
 
         - Feature Scaling: for the preserved outliers, it is advisable to consider using robust scaling methods (such as RobustScaler) to reduce the impact of outliers on the model.
 
-
-
 """
 
 # ----------------------------------------------------------------
@@ -49,10 +47,16 @@ warnings.filterwarnings("ignore")
 # ----------------------------------------------------------------
 # Load Data
 # ----------------------------------------------------------------
-data = pd.read_csv("../../data/interim/03_data_non_skewed.csv")
+data = pd.read_csv("../../data/processed/04_data_features.csv")
 data.info()
 data.describe()
 data.head()
+
+# ----------------------------------------------------------------
+# Create training and testing data
+# ----------------------------------------------------------------
+
+
 # ----------------------------------------------------------------
 # Feature Selection
 # ----------------------------------------------------------------
