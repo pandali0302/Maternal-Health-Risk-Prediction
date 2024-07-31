@@ -1,13 +1,9 @@
      
+### Feature Creation: 
+- Binary feature: Age (35y.o), BS (8 mmol/L)
 
-2. 特征工程
+- polynomial features such as square, cubic, or higher-order polynomial terms. This approach captures the curve relationship between age and the risk level, rather than assuming a simple linear relationship.
 
-    特征选择：分析哪些特征与RiskLevel有较强的相关性，可能需要移除一些无关或低相关的特征。
-    特征转换：对于分类变量（如果有），进行编码，如使用独热编码（One-Hot Encoding）。
-    特征缩放：对数值特征进行标准化或归一化，以消除不同量纲的影响。
+- feature interaction: create new features that are combinations of existing features, such as age*BS or age*BodyTemp.
 
-3. 数据集划分
-
-    划分策略：将数据集划分为训练集和测试集，常见的划分比例有70/30或80/20。
-    数据分层：确保每个划分中各类风险等级的样本分布均匀。
-
+- Sum of squares attributes
