@@ -1,3 +1,16 @@
+- Small dataset: Given that your dataset consists of only 452 entries, it may be necessary to pay special attention to the issue of overfitting. Consider using regularization techniques or simpler models.
+
+- Preserving Outliers: Whether to remove or keep them greatly depends on the understanding of our data and the type of analysis to be performed. In this case, the points that are outside of our box plots might be the actual true data points. 
+
+        - If outliers have significant meaning in business logic, choose to preserve them. In this case, consider using models that are robust to outliers, such as decision trees or random forests.
+        - or Choose models that can handle outliers. such as Support Vector Machines (SVMs) or neural networks, can be adjusted to reduce the impact of outliers.
+
+
+- Imbalanced data: the distribution of RiskLevels is uneven, may need to use oversampling techniques or choose certain models like Random forests, XGboost which can handle imbalanced data.
+
+
+
+
 模型选择
 
     算法选择：根据数据的特点选择合适的算法。对于分类问题，可以考虑逻辑回归、决策树、随机森林、梯度提升机、支持向量机等。
@@ -22,3 +35,5 @@
 
     部署策略：决定模型部署的方式，例如在本地服务器或云平台上。
     监控与维护：部署后，需要持续监控模型的性能，并定期进行维护和更新。
+
+

@@ -119,9 +119,6 @@ df_sum_squared["Age_BS_BP_sqrt"] = np.sqrt(
     + df_sum_squared["DiastolicBP"] ** 2
 )
 
-df_sum_squared.head()
-
-
 df_features_created = pd.concat(
     [df_sum_squared, df_features_poly.iloc[:, 6:], df_features_interaction.iloc[:, 6:]],
     axis=1,
@@ -130,6 +127,10 @@ df_features_created = pd.concat(
 df_features_created.columns
 df_features_created.head()
 
+# ----------------------------------------------------------------
+# add target variable
+# ----------------------------------------------------------------
+df_features_created["RiskLevel"] = df["RiskLevel"]
 
 # --------------------------------------------------------------
 # Export dataset
