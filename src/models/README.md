@@ -1,39 +1,42 @@
-- Small dataset: Given that your dataset consists of only 452 entries, it may be necessary to pay special attention to the issue of overfitting. Consider using regularization techniques or simpler models.
 
-- Preserving Outliers: Whether to remove or keep them greatly depends on the understanding of our data and the type of analysis to be performed. In this case, the points that are outside of our box plots might be the actual true data points. 
+### Feature Engineering
+The order of these steps can influence the final model performance and efficiency. Generally, these steps can be adjusted based on the specific task and characteristics of the dataset, but Below is a commonly recommended order:
 
-        - If outliers have significant meaning in business logic, choose to preserve them. In this case, consider using models that are robust to outliers, such as decision trees or random forests.
-        - or Choose models that can handle outliers. such as Support Vector Machines (SVMs) or neural networks, can be adjusted to reduce the impact of outliers.
-
-
-- Imbalanced data: the distribution of RiskLevels is uneven, may need to use oversampling techniques or choose certain models like Random forests, XGboost which can handle imbalanced data.
-
-
+    Feature Creation: (Done)
+    
+    Feature Split:
+        - Splitting Strategy: Divide the dataset into training and testing sets, with common ratios being 70/30 or 80/20.
+        - Stratified Sampling: Ensure that the distribution of risk levels is uniform in each division.
 
 
-模型选择
+    Feature Selection: 
+        - Use all the features in the dataset for the initial model building. and Check for multicollinearity using correlation matrix or Variance Inflation Factor (VIF).
+        - Using filter methods (e.g., variance threshold, correlation coefficients), embedded methods (e.g., L1 regularization-based feature selection), or wrapper methods (e.g., RFE(recursive feature elimination)) to select features.
 
-    算法选择：根据数据的特点选择合适的算法。对于分类问题，可以考虑逻辑回归、决策树、随机森林、梯度提升机、支持向量机等。
-    基准模型：建立一个简单的基准模型，如逻辑回归，作为性能比较的基线。
+    Feature Transformation: 
+        - Encoding: Covert target variable into a numerical format. (Done before)
+        - Skew Handling: Apply Log transformation or Box-Cox to features with high skewness (BS and BodyTemp) to reduce skewness. (Done before)
 
-5. 模型训练与验证
-
-    交叉验证：使用K折交叉验证来评估模型的稳定性和泛化能力。
-    超参数调优：使用网格搜索或随机搜索等方法调整模型参数，找到最优的参数组合。
-
-6. 性能评估
-
-    评估指标：选择合适的评估指标，如准确率、召回率、F1分数、AUC-ROC曲线等。
-    模型解释：使用特征重要性分析等方法解释模型的预测结果。
-
-7. 模型优化
-
-    集成学习：尝试使用集成学习方法，如bagging或boosting，来提高模型性能。
-    特征组合：尝试不同的特征组合，看是否能发现更好的特征子集。
-
-8. 模型部署
-
-    部署策略：决定模型部署的方式，例如在本地服务器或云平台上。
-    监控与维护：部署后，需要持续监控模型的性能，并定期进行维护和更新。
+        - Feature Scaling: for the preserved outliers, it is advisable to consider using robust scaling methods (such as RobustScaler) to reduce the impact of outliers on the model. will use cross-validation to evaluate both robust scaler and standard scaler to compare their performance.
 
 
+### Model selection
+    - Model Selection: Choose the appropriate model for the task. For classification problems, Logistic Regression, Decision Trees, Random Forest, Gradient Boosting, Support Vector Machines, etc. can be used.
+    - Imbalanced classes: models like SVM, Random forests, XGboost which can handle imbalanced classes.
+    - Benchmark Model: Build a simple benchmark model, such as Logistic regression, as a baseline for performance comparison.
+
+### Training and Validation
+    - cross validation: Use K-fold cross-validation to evaluate the model's performance and stability.
+    - hyperparameter tuning: Use grid search or random search to find the best hyperparameters for the model.
+
+### Model evaluation and model explanation
+    - Evaluation Metrics: Choose appropriate evaluation metrics, such as accuracy, recall, F1 score, AUC-ROC curve, etc.
+    - Model Interpretation: Use feature importance analysis methods to interpret the model's prediction results.
+
+### Model Optimization:
+    - ensemble methods: Try ensemble methods such as bagging or boosting to improve model performance.
+    - feature combination: Try different feature combinations to see if they can discover a better feature subset.
+
+### Model deployment
+    - Model Deployment: Deploy the model to a production environment, such as a web application, a mobile app or IoT device.
+    - Model Monitoring: Continuously monitor the model's performance and update it as needed.

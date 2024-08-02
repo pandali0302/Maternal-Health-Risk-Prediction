@@ -19,6 +19,29 @@ The order of these steps can influence the final model performance and efficienc
 
         - Feature Scaling: for the preserved outliers, it is advisable to consider using robust scaling methods (such as RobustScaler) to reduce the impact of outliers on the model. will use cross-validation to evaluate both robust scaler and standard scaler to compare their performance.
 
+
+Model selection
+    - Model Selection: Choose the appropriate model for the task. For classification problems, Logistic Regression, Decision Trees, Random Forest, Gradient Boosting, Support Vector Machines, etc. can be used.
+    - Imbalanced classes: models like SVM, Random forests, XGboost which can handle imbalanced classes.
+    - Benchmark Model: Build a simple benchmark model, such as Logistic regression, as a baseline for performance comparison.
+
+Training and Validation
+    - cross validation: Use K-fold cross-validation to evaluate the model's performance and stability.
+    - hyperparameter tuning: Use grid search or random search to find the best hyperparameters for the model.
+
+Model evaluation and model explanation
+    - Evaluation Metrics: Choose appropriate evaluation metrics, such as accuracy, recall, F1 score, AUC-ROC curve, etc.
+    - Model Interpretation: Use feature importance analysis methods to interpret the model's prediction results.
+
+Model Optimization:
+    - ensemble methods: Try ensemble methods such as bagging or boosting to improve model performance.
+    - feature combination: Try different feature combinations to see if they can discover a better feature subset.
+
+model deployment
+    - Model Deployment: Deploy the model to a production environment, such as a web application, a mobile app or IoT device.
+    - Model Monitoring: Continuously monitor the model's performance and update it as needed.
+
+
 """
 
 # ----------------------------------------------------------------
@@ -32,26 +55,34 @@ import seaborn as sns
 
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
-from sklearn.preprocessing import PolynomialFeatures, RobustScaler, StandardScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.feature_selection import RFE
 from sklearn.metrics import (
     classification_report,
     accuracy_score,
     make_scorer,
     confusion_matrix,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_curve,
+    auc,
+    roc_auc_score,
 )
+
 from sklearn.pipeline import make_pipeline
 
-from LearningAlgorithms import ClassificationAlgorithms
+# from Classification_Algorithms import ClassificationAlgorithms
+from Classification import FeatureSelectionClassification
+from Classification import ClassificationAlgorithms
 import itertools
-
 
 import warnings
 
 warnings.filterwarnings("ignore")
+sns.set_style("whitegrid")
 
 # ----------------------------------------------------------------
 # Load Data
@@ -61,97 +92,110 @@ data.info()
 data.describe()
 data.head()
 
-# ----------------------------------------------------------------
-# Create training and testing data
-# ----------------------------------------------------------------
-X = data.drop("RiskLevel", axis=1)
-y = data["RiskLevel"]
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.3, random_state=42, stratify=y
-)
+df = data.copy()
+X = df.drop("RiskLevel", axis=1)
+y = df["RiskLevel"]
 
 # ----------------------------------------------------------------
 # Feature Selection
-# 01- Check for multicollinearity
 # ----------------------------------------------------------------
-# show correlation matrix
-correlation_matrix = X_train.corr()
+# Check correlation matrix
+correlation_matrix = df.corr()
 plt.figure(figsize=(12, 8))
 sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f")
 plt.title("Correlation Matrix")
 plt.show()
 
 
-# Calculate Variance Inflation Factor (VIF)
-def calculate_vif(X):
+# Check for multicollinearity
+def standardize_and_calculate_vif(df):
+    # Standardize the features
+    scaler = StandardScaler()
+    df_standardized = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
+
+    # Calculate VIF
     vif = pd.DataFrame()
-    vif["Feature"] = X.columns
-    vif["VIF"] = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]
+    vif["features"] = df_standardized.columns
+    vif["VIF_Values"] = [
+        variance_inflation_factor(df_standardized.values, i)
+        for i in range(df_standardized.shape[1])
+    ]
+
+    # Sort by VIF_Values in descending order
+    vif = vif.sort_values(by="VIF_Values", ascending=False).reset_index(drop=True)
     return vif
 
 
-vif_df = calculate_vif(X_train)
-print(vif_df)
+standardize_and_calculate_vif(X)
 
 """
 no surprise that high VIF values which indicate high multicollinearity due to feature creation.
 
-we will choose RFE to select the top 10 features and use Random Forest as estimator.since Random Forest is an ensemble method that is less sensitive to multicollinearity.
+we will choose RFE to select the top n features and use Random Forest as estimator.since Random Forest is an ensemble method that is less sensitive to multicollinearity.
 """
 
-# ----------------------------------------------------------------
-# Feature Selection
-# 02- use Recursive Feature Elimination (RFE) to select the top features
-# ----------------------------------------------------------------
-# Iterate the number of features and plot a learning curve to visualize the model's performance according  to the number of features
-# ------------------------choose RFC as estimator
-estimator = RandomForestClassifier(random_state=42)
-score = []
-for i in range(1, 32, 3):
-    rfe = RFE(estimator, n_features_to_select=i, step=1)
-    X_wrapper = rfe.fit_transform(X_train, y_train)
-    selected_features = X_train.columns[rfe.support_]
-    # train the model with selected feature
-    estimator.fit(X_train[selected_features], y_train)
-    # predict on test data
-    y_pred = estimator.predict(X_test[selected_features])
-    # evaluate the model
-    score_i = accuracy_score(y_test, y_pred)
-    score.append(score_i)
-plt.figure(figsize=[20, 6])
-plt.plot(range(1, 32, 3), score)
-plt.xticks(range(1, 32, 3))
-plt.show()
+
+# 02- use Recursive Feature Elimination (RFE) to select the top n features
+# function evaluate_rfe_features(X, y)
+def evaluate_rfe_features(X, y):
+
+    # Split the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.3, random_state=42, stratify=y
+    )
+
+    score_list = []
+    selected_features_list = []
+
+    for k in range(1, len(X.columns) + 1, 2):
+        estimator = RandomForestClassifier(random_state=42)
+        rfe = RFE(estimator=estimator, n_features_to_select=k)
+        x_train_rfe = rfe.fit_transform(X_train, y_train)
+        x_test_rfe = rfe.transform(X_test)
+
+        estimator.fit(x_train_rfe, y_train)
+        y_preds_rfe = estimator.predict(x_test_rfe)
+
+        # Calculate the accuracy score as an example of performance evaluation
+        # score_rfe = estimator.score(x_test_rfe, y_test)
+        score_rfe = accuracy_score(y_test, y_preds_rfe)
+        score_list.append(score_rfe)
+
+        # Get selected feature names
+        selected_feature_mask = rfe.get_support()
+        selected_features = X.columns[selected_feature_mask].tolist()
+        selected_features_list.append(selected_features)
+
+    x = np.arange(1, len(X.columns) + 1, 2)
+    result_df = pd.DataFrame(
+        {
+            "k": x,
+            "accuracy score": score_list,
+            "selected_features": selected_features_list,
+        }
+    )
+    # plot the accuracy score vs. number of features
+    plt.figure(figsize=[20, 6])
+    plt.plot(x, score_list)
+    plt.xticks(x)
+    plt.show()
+
+    return result_df
+
+
+rfe_features_df = evaluate_rfe_features(X, y)
 
 """
-the score hit the high point at 10 features, so we will choose 10 features for the final model.
+the score hit the high point at 7 features, so we will choose 8 features for the final model.
 """
-estimator = RandomForestClassifier(random_state=42)
-
-rfe = RFE(estimator, n_features_to_select=10, step=1)
-rfe = rfe.fit(X_train, y_train)
-
-rfe.support_.sum()
-rfe.ranking_
-
-selected_features_rfe = X_train.columns[rfe.support_]
-print("Selected features:", selected_features_rfe)
-
-estimator.fit(X_train[selected_features_rfe], y_train)
-y_pred = estimator.predict(X_test[selected_features_rfe])
-
-# evaluate the model
-print(classification_report(y_test, y_pred))
-print("Accuracy:", accuracy_score(y_test, y_pred))  # 0.72
-
+# select features where accuracy score is highest
+selected_features_rfe = rfe_features_df.loc[rfe_features_df["accuracy score"].idxmax()][
+    "selected_features"
+]
 # Below are selected_features_rfe
-[
-    "BS",
+selected_features_rfe = [
     "Age_BS_BP_sqrt",
-    "BS_squared",
     "Age_BS_interaction",
-    "Age_HeartRate_interaction",
     "SystolicBP_BS_interaction",
     "SystolicBP_BodyTemp_interaction",
     "DiastolicBP_BS_interaction",
@@ -159,34 +203,13 @@ print("Accuracy:", accuracy_score(y_test, y_pred))  # 0.72
     "BS_HeartRate_interaction",
 ]
 
+# ----------------------------------------------------------------
+# Create training and testing data
+# ----------------------------------------------------------------
 
-# =========================choose cross validation to evaluate the model
-# estimator = RandomForestClassifier(random_state=42)
-# rfe = RFE(estimator, n_features_to_select=10, step=1)
-
-# # fit the model on entire dataset
-# rfe.fit(X, y)
-# selected_features = X.columns[rfe.support_]
-
-# scoring = make_scorer(accuracy_score)
-# cv_scores = cross_val_score(estimator, X[selected_features], y, cv=5, scoring=scoring)
-
-# print("Cross-validation scores:", cv_scores)
-# print("Mean accuracy:", cv_scores.mean()) # 0.588
-
-# # ======【TIME WARNING: 20 sec】======#
-# estimator = RandomForestClassifier(random_state=42)
-# score = []
-# for i in range(1,32,5):
-#     X_wrapper = RFE(estimator, n_features_to_select=i, step=1).fit_transform(X, y)
-#     once = cross_val_score(estimator, X_wrapper, y, cv=5).mean()
-#     score.append(once)
-# plt.figure(figsize=[20,6])
-# plt.plot(range(1, 32, 5), score)
-# plt.xticks(range(1, 32, 5))
-# plt.show()
-
-
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
 # ----------------------------------------------------------------
 # Feature scaling
 # ----------------------------------------------------------------
@@ -204,35 +227,32 @@ X_test_scaled_df = pd.DataFrame(
 # --------------------------------------------------------------
 # Perform forward feature selection using simple decision tree
 # --------------------------------------------------------------
-learner = ClassificationAlgorithms()
+selector = FeatureSelectionClassification()
 
-max_features = 10
+max_features = 8
 # learner use descion tree to select features, no need to scale the data
-selected_features, ordered_features, ordered_scores = learner.forward_selection(
-    max_features, X_train, y_train
+selected_features, ordered_features, ordered_scores = selector.forward_selection(
+    max_features, X_train, X_test, y_train, y_test, gridsearch=True
 )
 
 selected_features = [
-    "SystolicBP_BodyTemp_interaction",
-    "DiastolicBP_BS_interaction",
-    "Age_DiastolicBP_interaction",
-    "BodyTemp_HeartRate_interaction",
-    "HeartRate",
-    "Age_HeartRate_interaction",
-    "DiastolicBP_BodyTemp_interaction",
-    "SystolicBP_squared",
-    "HeartRate_squared",
-    "Age_BS_interaction",
+    "SystolicBP_BS_interaction",
+    "BodyTemp",
+    "BS_HeartRate_interaction",
+    "IsHighBS",
+    "BodyTemp_squared",
+    "BS_BodyTemp_interaction",
+    "DiastolicBP",
+    "BP_sqrt",
 ]
-
 
 # --------------------------------------------------------------
 # Split feature subsets
 # --------------------------------------------------------------
-basic_features = list(data.columns[:8])
-poly_square_features = [f for f in data.columns if "_squared" in f]
-interaction_features = [f for f in data.columns if "_interaction" in f]
-sqrt_features = [f for f in data.columns if "_sqrt" in f]
+basic_features = list(df.columns[:8])
+poly_square_features = [f for f in df.columns if "_squared" in f]
+interaction_features = [f for f in df.columns if "_interaction" in f]
+sqrt_features = [f for f in df.columns if "_sqrt" in f]
 
 print("basic features", len(basic_features))
 print("poly square features", len(poly_square_features))
@@ -265,13 +285,14 @@ feature_names = [
     "selected_features",
 ]
 
+learner = ClassificationAlgorithms()
 iterations = 1
 score_df = pd.DataFrame()
 
 for i, f in zip(range(len(possible_feature_sets)), feature_names):
     print("Feature set:", i)
-    selected_train_X = X_train[possible_feature_sets[i]]
-    selected_test_X = X_test[possible_feature_sets[i]]
+    # selected_train_X = X_train[possible_feature_sets[i]]
+    # selected_test_X = X_test[possible_feature_sets[i]]
 
     selected_scaled_train_X = X_train_scaled_df[possible_feature_sets[i]]
     selected_scaled_test_X = X_test_scaled_df[possible_feature_sets[i]]
@@ -302,7 +323,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
             class_train_prob_y,
             class_test_prob_y,
         ) = learner.random_forest(
-            selected_train_X, y_train, selected_test_X, gridsearch=True
+            selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=True
         )
         performance_test_rf += accuracy_score(y_test, class_test_y)
 
@@ -328,7 +349,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         class_train_prob_y,
         class_test_prob_y,
     ) = learner.decision_tree(
-        selected_train_X, y_train, selected_test_X, gridsearch=True
+        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=True
     )
     performance_test_dt = accuracy_score(y_test, class_test_y)
 
@@ -338,7 +359,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         class_test_y,
         class_train_prob_y,
         class_test_prob_y,
-    ) = learner.naive_bayes(selected_train_X, y_train, selected_test_X)
+    ) = learner.naive_bayes(selected_scaled_train_X, y_train, selected_scaled_test_X)
 
     performance_test_nb = accuracy_score(y_test, class_test_y)
 
@@ -399,7 +420,7 @@ plt.show()
 
 """
 Random forest perform best on the most complex feature sets.
-RF	feature set 3	0.772059
+RF	feature set 4	0.764706
 """
 
 # --------------------------------------------------------------
@@ -412,10 +433,68 @@ RF	feature set 3	0.772059
     class_train_prob_y,
     class_test_prob_y,
 ) = learner.random_forest(
-    X_train[feature_set_3], y_train, X_test[feature_set_3], gridsearch=True
+    X_train[feature_set_4], y_train, X_test[feature_set_4], gridsearch=True
 )
 
 accuracy = accuracy_score(y_test, class_test_y)
+print(classification_report(y_test, class_test_y))
 
 classes = class_test_prob_y.columns
 cm = confusion_matrix(y_test, class_test_y, labels=classes)
+
+
+# Define a function to plot the confusion matrix
+def plot_confusion_matrix(cm, classes, title="Confusion Matrix", cmap=plt.cm.Blues):
+    """
+    This function plots a confusion matrix.
+
+    Parameters:
+        cm (array-like): Confusion matrix as returned by sklearn.metrics.confusion_matrix.
+        classes (list): List of class names, e.g., ['Class 0', 'Class 1'].
+        title (str): Title for the plot.
+        cmap (matplotlib colormap): Colormap for the plot.
+    """
+    # Display the confusion matrix as an image
+    plt.imshow(cm, interpolation="nearest", cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+
+    # Set labels and tick marks for the matrix
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    # Add text annotations for each cell in the matrix
+    fmt = ".0f"
+    thresh = cm.max() / 2.0
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(
+            j,
+            i,
+            format(cm[i, j], fmt),
+            horizontalalignment="center",
+            color="white" if cm[i, j] > thresh else "black",
+        )
+
+    plt.ylabel("True label")
+    plt.xlabel("Predicted label")
+    plt.grid()
+    plt.tight_layout()
+    plt.show()
+
+
+plot_confusion_matrix(cm, classes)
+
+
+"""
+- class weights
+    # Import the necessary function for computing class weights
+    from sklearn.utils.class_weight import compute_class_weight
+
+- how algorithms handle imbalanced data (RFC, XGBoost)
+
+- metrics like precision, recall, f1-score, ROC curve, AUC score
+
+- SHAP
+
+"""
