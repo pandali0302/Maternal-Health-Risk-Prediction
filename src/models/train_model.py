@@ -1,49 +1,3 @@
-"""
-Feature Engineering
-The order of these steps can influence the final model performance and efficiency. Generally, these steps can be adjusted based on the specific task and characteristics of the dataset, but Below is a commonly recommended order:
-
-    Feature Creation: (Done)
-    
-    Feature Split:
-        - Splitting Strategy: Divide the dataset into training and testing sets, with common ratios being 70/30 or 80/20.
-        - Stratified Sampling: Ensure that the distribution of risk levels is uniform in each division.
-
-
-    Feature Selection: 
-        - Use all the features in the dataset for the initial model building. and Check for multicollinearity using correlation matrix or Variance Inflation Factor (VIF).
-        - Using filter methods (e.g., variance threshold, correlation coefficients), embedded methods (e.g., L1 regularization-based feature selection), or wrapper methods (e.g., RFE(recursive feature elimination)) to select features.
-
-    Feature Transformation: 
-        - Encoding: Covert target variable into a numerical format. (Done before)
-        - Skew Handling: Apply Log transformation or Box-Cox to features with high skewness (BS and BodyTemp) to reduce skewness. (Done before)
-
-        - Feature Scaling: for the preserved outliers, it is advisable to consider using robust scaling methods (such as RobustScaler) to reduce the impact of outliers on the model. will use cross-validation to evaluate both robust scaler and standard scaler to compare their performance.
-
-
-Model selection
-    - Model Selection: Choose the appropriate model for the task. For classification problems, Logistic Regression, Decision Trees, Random Forest, Gradient Boosting, Support Vector Machines, etc. can be used.
-    - Imbalanced classes: models like SVM, Random forests, XGboost which can handle imbalanced classes.
-    - Benchmark Model: Build a simple benchmark model, such as Logistic regression, as a baseline for performance comparison.
-
-Training and Validation
-    - cross validation: Use K-fold cross-validation to evaluate the model's performance and stability.
-    - hyperparameter tuning: Use grid search or random search to find the best hyperparameters for the model.
-
-Model evaluation and model explanation
-    - Evaluation Metrics: Choose appropriate evaluation metrics, such as accuracy, recall, F1 score, AUC-ROC curve, etc.
-    - Model Interpretation: Use feature importance analysis methods to interpret the model's prediction results.
-
-Model Optimization:
-    - ensemble methods: Try ensemble methods such as bagging or boosting to improve model performance.
-    - feature combination: Try different feature combinations to see if they can discover a better feature subset.
-
-model deployment
-    - Model Deployment: Deploy the model to a production environment, such as a web application, a mobile app or IoT device.
-    - Model Monitoring: Continuously monitor the model's performance and update it as needed.
-
-
-"""
-
 # ----------------------------------------------------------------
 # Install Library
 # ----------------------------------------------------------------
@@ -186,7 +140,7 @@ def evaluate_rfe_features(X, y):
 rfe_features_df = evaluate_rfe_features(X, y)
 
 """
-the score hit the high point at 7 features, so we will choose 8 features for the final model.
+the score hit the high point at 7 features, so we will choose 7 features for the final model.
 """
 # select features where accuracy score is highest
 selected_features_rfe = rfe_features_df.loc[rfe_features_df["accuracy score"].idxmax()][
@@ -242,7 +196,7 @@ selected_features = [
     "IsHighBS",
     "BodyTemp_squared",
     "BS_BodyTemp_interaction",
-    "DiastolicBP",
+    "SystolicBP",
     "BP_sqrt",
 ]
 
@@ -323,7 +277,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
             class_train_prob_y,
             class_test_prob_y,
         ) = learner.random_forest(
-            selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=True
+            selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=False,
         )
         performance_test_rf += accuracy_score(y_test, class_test_y)
 
@@ -338,7 +292,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         class_train_prob_y,
         class_test_prob_y,
     ) = learner.k_nearest_neighbor(
-        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=True
+        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=False,
     )
     performance_test_knn = accuracy_score(y_test, class_test_y)
 
@@ -349,7 +303,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         class_train_prob_y,
         class_test_prob_y,
     ) = learner.decision_tree(
-        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=True
+        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=False,
     )
     performance_test_dt = accuracy_score(y_test, class_test_y)
 
@@ -381,7 +335,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         class_train_prob_y,
         class_test_prob_y,
     ) = learner.support_vector_machine_without_kernel(
-        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=True
+        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=False
     )
     performance_test_svm = accuracy_score(y_test, class_test_y)
 
@@ -416,24 +370,27 @@ score_df.groupby(["model", "feature_set"]).mean().unstack().plot(
 plt.ylabel("Accuracy")
 plt.xlabel("Feature set")
 plt.title("Accuracy of different models on different feature sets")
+plt.legend(title="Feature set", bbox_to_anchor=(1.05, 1), loc="upper left")
 plt.show()
 
 """
-Random forest perform best on the most complex feature sets.
-RF	feature set 4	0.764706
+Random forest perform best with all feature sets. Choose Random forest classifier for further tuning.
+
+RF	selected_features	0.786765
+RF	feature set 3	0.779412
+RF	feature set 4	0.772059
 """
 
 # --------------------------------------------------------------
 # Select best model and evaluate results
 # --------------------------------------------------------------
-
 (
     class_train_y,
     class_test_y,
     class_train_prob_y,
     class_test_prob_y,
 ) = learner.random_forest(
-    X_train[feature_set_4], y_train, X_test[feature_set_4], gridsearch=True
+    X_train[feature_set_4], y_train, X_test[feature_set_4], gridsearch=False
 )
 
 accuracy = accuracy_score(y_test, class_test_y)
@@ -487,14 +444,36 @@ plot_confusion_matrix(cm, classes)
 
 
 """
-- class weights
-    # Import the necessary function for computing class weights
-    from sklearn.utils.class_weight import compute_class_weight
+分类报告：
+- 模型在高风险和低风险类别上的表现较好，但在中风险类别上的识别能力较差。需要采取措施平衡数据、优化特征和调整模型，以提高中风险类别的识别性能。通过交叉验证和特征选择，可以进一步验证和提升模型的整体表现。
 
-- how algorithms handle imbalanced data (RFC, XGBoost)
+    中风险(1)类别的表现不佳：
 
-- metrics like precision, recall, f1-score, ROC curve, AUC score
+    精准率为0.71,召回率仅为0.16,F1得分为0.26,表明模型在中风险类别上的识别能力较差。
+    建议：使用过采样(如MOTE)或欠采样等数据平衡技术,增加中风险样本的数量。还可以尝试增加新的特征或调整模型超参数。
 
-- SHAP
+混淆矩阵：
+- 中风险(1)类别的表现：中风险(1)的样本中,只有5个被正确分类,23个被误分类为低风险(0),4个被误分类为高风险(2)。模型在中风险类别上的表现很差。
+
+    重采样技术
+        过采样:如SMOTE(Synthetic Minority Over-sampling Technique)，用于增加中风险(1)样本的数量。
+        欠采样:减少低风险(0)样本的数量，以平衡数据集。
+
+    特征工程:
+        进一步挖掘可能对中风险(1)有更好区分效果的新特征。
+        考虑非线性特征组合或高级特征，如多项式特征。
+
+    模型调整:
+        超参数调优:使用网格搜索(Grid Search)或随机搜索(Random Search)对模型进行超参数调优。
+        集成方法:如随机森林(Random Forest)、梯度提升树(Gradient Boosting Trees)等，可能会有更好的分类效果。
+
+    模型选择:
+        尝试其他分类算法，如支持向量机(SVM)、XGBoost、LightGBM等,看看是否能够提高中风险(1)类别的准确性。
+
+    交叉验证:
+        使用交叉验证来评估模型的稳定性和泛化能力，确保模型在不同数据分割下表现一致。
+
+    阈值调整:
+        调整分类阈值，可能会提高中风险(1)类别的识别率。
 
 """

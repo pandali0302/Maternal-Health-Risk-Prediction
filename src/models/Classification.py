@@ -446,6 +446,7 @@ class ClassificationAlgorithms:
         train_y,
         test_X,
         n_estimators=10,
+        # max_depth=1,
         min_samples_leaf=5,
         criterion="gini",
         print_model_details=False,
@@ -457,6 +458,7 @@ class ClassificationAlgorithms:
                 {
                     "min_samples_leaf": [2, 10, 50, 100, 200],
                     "n_estimators": [10, 50, 100],
+                    # "max_depth": [1, 3, 5, 10, 20],
                     "criterion": ["gini", "entropy"],
                 }
             ]
