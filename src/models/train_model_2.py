@@ -39,12 +39,11 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from regex import P
 import seaborn as sns
 
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, label_binarize
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFE
@@ -61,7 +60,7 @@ from sklearn.pipeline import make_pipeline
 from Classification import FeatureSelectionClassification
 from Classification import ClassificationAlgorithms
 import itertools
-
+import joblib
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -262,13 +261,13 @@ rfc = RandomForestClassifier(
     n_jobs=-1,
 )
 
-rfc.fit(X_train[feature_set_2], y_train)
+rfc.fit(X_train_scaled_df[feature_set_2], y_train)
 rfc.base_estimator_
 rfc.feature_importances_
 rfc.classes_
 
-y_predict = rfc.predict(X_test[feature_set_2])
-y_predict_proba = rfc.predict_proba(X_test[feature_set_2])
+y_predict = rfc.predict(X_test_scaled_df[feature_set_2])
+y_predict_proba = rfc.predict_proba(X_test_scaled_df[feature_set_2])
 
 # ----------------------------------------------------------------
 # Define metirics and evaluation function
@@ -286,8 +285,6 @@ print(classification_report(y_test, y_predict))
    macro avg       0.78      0.69      0.69       136
 weighted avg       0.77      0.77      0.74       136
 """
-
-from sklearn.preprocessing import label_binarize
 
 # ROC AUC
 n_classes = 3
@@ -350,6 +347,11 @@ def plot_confusion_matrix(cm, classes, title="Confusion Matrix", cmap=plt.cm.Blu
 
 plot_confusion_matrix(cm, classes)
 
+# ----------------------------------------------------------------
+# save model
+# ----------------------------------------------------------------
+
+joblib.dump(rfc, "../../models/RFC_model.pkl")
 
 # ----------------------------------------------------------------
 # XGBoost Classifier
