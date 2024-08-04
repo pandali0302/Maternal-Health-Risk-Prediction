@@ -43,35 +43,37 @@ The order of these steps can influence the final model performance and efficienc
 
 
 
-"""
+The model performs well on high-risk and low-risk categories but has poor identification ability for the medium-risk category. Measures need to be taken to balance the data, optimize features, and adjust the model to improve the identification performance of the medium-risk category. 
+
+
               precision    recall  f1-score   support
 
-           0       0.72      1.00      0.84        70
-           1       0.80      0.12      0.22        32
-           2       0.88      0.88      0.88        34
+           0       0.73      0.99      0.84        70
+           1       0.67      0.12      0.21        32
+           2       0.86      0.91      0.89        34
 
     accuracy                           0.76       136
-   macro avg       0.80      0.67      0.65       136
-weighted avg       0.78      0.76      0.70       136
+   macro avg       0.75      0.67      0.65       136
+weighted avg       0.75      0.76      0.70       136
 
-ROC AUC scores: 
-{0: 0.8307359307359308, 1: 0.6283052884615384, 2: 0.9504036908881199}
 
-"""
+ROC AUC scores:
+{0: 0.8153679653679653, 1: 0.6442307692307692, 2: 0.9587658592848904}
 
-### After Hyperparameters Tuning:
-"""
+
+
+After setting class_weight param:
+
+
               precision    recall  f1-score   support
 
-           0       0.74      0.96      0.83        70
-           1       0.60      0.19      0.29        32
+           0       0.74      0.94      0.83        70
+           1       0.58      0.22      0.32        32
            2       0.89      0.91      0.90        34
 
     accuracy                           0.76       136
-   macro avg       0.74      0.69      0.67       136
-weighted avg       0.74      0.76      0.72       136
+   macro avg       0.74      0.69      0.68       136
+weighted avg       0.74      0.76      0.73       136
 
 ROC AUC scores:
-{0: 0.8086580086580086, 1: 0.6796875, 2: 0.9449250288350635} 
-
-"""
+{0: 0.819047619047619, 1: 0.6604567307692307, 2: 0.9483852364475203}

@@ -35,7 +35,12 @@ import seaborn as sns
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 from sklearn.preprocessing import StandardScaler, label_binarize
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.model_selection import (
+    train_test_split,
+    cross_val_score,
+    GridSearchCV,
+    StratifiedKFold,
+)
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFE
 from sklearn.metrics import (
@@ -143,12 +148,13 @@ selected_features = [
 
 
 # ----------------------------------------------------------------
-# Define class weights
+# Define class weights and stratified k-fold for imbalanced data
 # ----------------------------------------------------------------
 class_weight = {0: 0.2, 1: 0.4, 2: 0.4}
 X_train_f = X_train_scaled_df[feature_set_4]
 X_test_f = X_test_scaled_df[feature_set_4]
 
+stratified_kfold = StratifiedKFold(n_splits=5)
 
 # ----------------------------------------------------------------
 # Random Forest Classifier
@@ -172,12 +178,13 @@ param_grid = {"max_features": np.arange(5, 30, 1)}  # both direction
 param_grid = {"criterion": ["gini", "entropy"]}  # depends on
 
 tuned_parameters = [
-                {
-                    "min_samples_leaf": [2, 10, 50, 100, 200],
-                    "n_estimators": [10, 50, 100],
-                    # "max_depth": [1, 3, 5, 10, 20],
-                    "criterion": ["gini", "entropy"],
-                }]
+    {
+        "min_samples_leaf": [2, 5, 10, 15],
+        "n_estimators": [10, 50, 70, 100],
+        # "max_depth": [1, 3, 5, 10, 20],
+        "criterion": ["gini", "entropy"],
+    }
+]
 # ----------------------------------------------------------------
 # Tuning n_estimators
 score_estimator = []
@@ -185,7 +192,7 @@ for i in range(0, 200, 10):
     rfc = RandomForestClassifier(
         n_estimators=i + 1, class_weight=class_weight, random_state=42, n_jobs=-1
     )
-    score = cross_val_score(rfc, X_train_f, y_train, cv=5).mean()
+    score = cross_val_score(rfc, X_train_f, y_train, cv=stratified_kfold).mean()
     score_estimator.append(score)
 print(max(score_estimator), (score_estimator.index(max(score_estimator)) * 10) + 1)
 plt.figure(figsize=[20, 8])
@@ -194,11 +201,11 @@ plt.show()
 # 0.6583829365079366 111
 
 score_estimator = []
-for i in range(110,121 ):
+for i in range(110, 121):
     rfc = RandomForestClassifier(
         n_estimators=i + 1, class_weight=class_weight, random_state=42, n_jobs=-1
     )
-    score = cross_val_score(rfc, X_train_f, y_train, cv=5).mean()
+    score = cross_val_score(rfc, X_train_f, y_train, cv=stratified_kfold).mean()
     score_estimator.append(score)
 print(
     max(score_estimator),
@@ -215,12 +222,9 @@ plt.show()
 param_grid = {"max_depth": np.arange(1, 20, 1)}  # for small dataset, try 1~10, or 1~20
 
 rfc = RandomForestClassifier(
-    n_estimators=117, 
-    class_weight=class_weight, 
-    random_state=42, 
-    n_jobs=-1
+    n_estimators=117, class_weight=class_weight, random_state=42, n_jobs=-1
 )
-GS = GridSearchCV(rfc, param_grid, cv=5, scoring="accuracy")
+GS = GridSearchCV(rfc, param_grid, cv=stratified_kfold, scoring="accuracy")
 GS.fit(X_train_f, y_train)
 GS.best_params_  # 4
 GS.best_score_  # 0.7059027777777778
@@ -230,33 +234,13 @@ GS.best_score_  # 0.7059027777777778
 param_grid = {"min_samples_leaf": np.arange(1, 1 + 20, 1)}
 
 rfc = RandomForestClassifier(
-    n_estimators=117, 
-    max_depth=4, 
-    class_weight=class_weight, 
-    random_state=42, 
-    n_jobs=-1
+    n_estimators=117, max_depth=4, class_weight=class_weight, random_state=42, n_jobs=-1
 )
 
-GS = GridSearchCV(rfc, param_grid, cv=5, scoring="accuracy")
+GS = GridSearchCV(rfc, param_grid, cv=stratified_kfold, scoring="accuracy")
 GS.fit(X_train_f, y_train)
-GS.best_params_  # 10 
+GS.best_params_  # 10
 GS.best_score_  # 0.715376984126984
-
-
-# # Tuning min_samples_split
-# param_grid = {"min_samples_split": np.arange(2, 2 + 20, 1)}
-# rfc = RandomForestClassifier(
-#     n_estimators=53,
-#     max_depth=4,
-#     min_samples_leaf=10,
-#     class_weight=class_weight,
-#     random_state=42,
-#     n_jobs=-1,
-# )
-# GS = GridSearchCV(rfc, param_grid, cv=5, scoring="accuracy")
-# GS.fit(X_train_f, y_train)
-# GS.best_params_  #
-# GS.best_score_
 
 # ----------------------------------------------------------------
 # Tuning max_features
@@ -270,7 +254,7 @@ rfc = RandomForestClassifier(
     random_state=42,
     n_jobs=-1,
 )
-GS = GridSearchCV(rfc, param_grid, cv=5, scoring="accuracy")
+GS = GridSearchCV(rfc, param_grid, cv=stratified_kfold, scoring="accuracy")
 GS.fit(X_train_f, y_train)
 GS.best_params_  # 2 keep default
 GS.best_score_  # 0.715376984126984
@@ -279,20 +263,19 @@ GS.best_score_  # 0.715376984126984
 # Tuning criterion
 param_grid = {"criterion": ["gini", "entropy"]}
 rfc = RandomForestClassifier(
-    n_estimators=117, 
-    max_depth=4, 
-    min_samples_leaf=10, 
+    n_estimators=117,
+    max_depth=4,
+    min_samples_leaf=10,
     # max_features=2,
-    class_weight=class_weight, 
-    random_state=42, 
+    class_weight=class_weight,
+    random_state=42,
     n_jobs=-1,
 )
-GS = GridSearchCV(rfc, param_grid, cv=5, scoring="accuracy")
+GS = GridSearchCV(rfc, param_grid, cv=stratified_kfold, scoring="accuracy")
 GS.fit(X_train_f, y_train)
 GS.best_params_  # gini; keep default
 GS.best_score_
 # 0.715376984126984
-
 
 # ----------------------------------------------------------------
 # Train model with the best params
@@ -300,7 +283,8 @@ rfc = RandomForestClassifier(
     n_estimators=117,
     max_depth=4,
     min_samples_leaf=10,
-    # max_features=2,
+    max_features=2,
+    criterion="gini",
     class_weight=class_weight,
     random_state=42,
     n_jobs=-1,
@@ -311,8 +295,8 @@ rfc.base_estimator_
 rfc.feature_importances_
 rfc.classes_
 
-y_predict = rfc.predict(X_test_f[feature_set_4])
-y_predict_proba = rfc.predict_proba(X_test_f[feature_set_4])
+y_predict = rfc.predict(X_test_f)
+y_predict_proba = rfc.predict_proba(X_test_f)
 
 # ----------------------------------------------------------------
 # Define metirics and evaluation function
@@ -396,11 +380,4 @@ plot_confusion_matrix(cm, classes)
 # ----------------------------------------------------------------
 # save model
 # ----------------------------------------------------------------
-
 joblib.dump(rfc, "../../models/RFC_model.pkl")
-
-
-"""
-
-
-"""

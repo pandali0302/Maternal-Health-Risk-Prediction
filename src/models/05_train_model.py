@@ -10,19 +10,19 @@ import seaborn as sns
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 from sklearn.preprocessing import StandardScaler, label_binarize
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import (
+    train_test_split,
+    cross_val_score,
+    GridSearchCV,
+    StratifiedKFold,
+)
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFE
 from sklearn.metrics import (
     classification_report,
     accuracy_score,
-    make_scorer,
     confusion_matrix,
-    precision_score,
-    recall_score,
-    f1_score,
     roc_curve,
-    auc,
     roc_auc_score,
 )
 
@@ -32,6 +32,7 @@ from sklearn.pipeline import make_pipeline
 from Classification import FeatureSelectionClassification
 from Classification import ClassificationAlgorithms
 import itertools
+import joblib
 
 import warnings
 
@@ -266,7 +267,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
             selected_scaled_train_X,
             y_train,
             selected_scaled_test_X,
-            gridsearch=True,
+            gridsearch=False,
         )
         performance_test_nn += accuracy_score(y_test, class_test_y)
 
@@ -280,7 +281,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
             selected_scaled_train_X,
             y_train,
             selected_scaled_test_X,
-            gridsearch=True,
+            gridsearch=False,
         )
         performance_test_rf += accuracy_score(y_test, class_test_y)
 
@@ -298,7 +299,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         selected_scaled_train_X,
         y_train,
         selected_scaled_test_X,
-        gridsearch=True,
+        gridsearch=False,
     )
     performance_test_knn = accuracy_score(y_test, class_test_y)
 
@@ -312,7 +313,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         selected_scaled_train_X,
         y_train,
         selected_scaled_test_X,
-        gridsearch=True,
+        gridsearch=False,
     )
     performance_test_dt = accuracy_score(y_test, class_test_y)
 
@@ -333,7 +334,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
     #     class_train_prob_y,
     #     class_test_prob_y,
     # ) = learner.support_vector_machine_with_kernel(
-    #     selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=True
+    #     selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=False
     # )
     # performance_test_svm_kernel = accuracy_score(y_test, class_test_y)
 
@@ -344,7 +345,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         class_train_prob_y,
         class_test_prob_y,
     ) = learner.support_vector_machine_without_kernel(
-        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=True
+        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=False
     )
     performance_test_svm = accuracy_score(y_test, class_test_y)
 
@@ -385,8 +386,10 @@ plt.show()
 """
 Random forest perform best with all feature sets. Choose Random forest classifier for further tuning.
 
-RF	feature set 4	0.772059
-RF	feature set 2	0.764706
+RF	feature set 1	0.764706
+RF	selected_features	0.764706
+RF	feature set 3	0.764706
+RF	feature set 4	0.750000
 """
 
 # --------------------------------------------------------------
@@ -398,21 +401,26 @@ RF	feature set 2	0.764706
     class_train_prob_y,
     class_test_prob_y,
 ) = learner.random_forest(
-    X_train[feature_set_4], y_train, X_test[feature_set_4], gridsearch=True
+    X_train_scaled_df[feature_set_4],
+    y_train,
+    X_test_scaled_df[feature_set_4],
+    print_model_details=True,
+    gridsearch=True,
 )
+# {'criterion': 'gini', 'min_samples_leaf': 10, 'n_estimators': 50}
 
 accuracy = accuracy_score(y_test, class_test_y)
 print(classification_report(y_test, class_test_y))
 """
               precision    recall  f1-score   support
 
-           0       0.72      1.00      0.84        70
-           1       0.80      0.12      0.22        32
-           2       0.88      0.88      0.88        34
+           0       0.73      0.99      0.84        70
+           1       0.67      0.12      0.21        32
+           2       0.86      0.91      0.89        34
 
     accuracy                           0.76       136
-   macro avg       0.80      0.67      0.65       136
-weighted avg       0.78      0.76      0.70       136
+   macro avg       0.75      0.67      0.65       136
+weighted avg       0.75      0.76      0.70       136
 
 """
 
@@ -428,7 +436,7 @@ for i in range(n_classes):
 
 print("ROC AUC scores: ", roc_auc)
 # ROC AUC scores:
-# {0: 0.8307359307359308, 1: 0.6283052884615384, 2: 0.9504036908881199}
+# {0: 0.8153679653679653, 1: 0.6442307692307692, 2: 0.9587658592848904}
 
 
 # Confusion matrix
@@ -485,7 +493,7 @@ plot_confusion_matrix(cm, classes)
 
     中风险(1)类别的表现不佳：
 
-    精准率为0.80,召回率仅为0.12,F1得分为0.22,表明模型在中风险类别上的识别能力较差。
+    精准率为0.67,召回率仅为0.12,F1得分为0.21,表明模型在中风险类别上的识别能力较差。
     建议：使用过采样(如MOTE)或欠采样等数据平衡技术,增加中风险样本的数量。还可以尝试增加新的特征或调整模型超参数。
 
 混淆矩阵：
@@ -514,17 +522,103 @@ plot_confusion_matrix(cm, classes)
 
 """
 
+
+class_weight = {0: 0.2, 1: 0.4, 2: 0.4}
+X_train_f = X_train_scaled_df[feature_set_4]
+X_test_f = X_test_scaled_df[feature_set_4]
+
+# stratified_kfold = StratifiedKFold(n_splits=5)
+
+# {'criterion': 'gini', 'min_samples_leaf': 10, 'n_estimators': 100}
+rfc = RandomForestClassifier(
+    n_estimators=100,
+    # max_depth=4,
+    min_samples_leaf=10,
+    # max_features=2,
+    criterion="gini",
+    class_weight=class_weight,
+    random_state=42,
+    n_jobs=-1,
+)
+
+# -------------------------------------------------------------
+# # create a Random Forest Classifier
+# forest = RandomForestClassifier(class_weight=class_weight)
+# # define the hyperparameter grid
+# param_grid = {
+#     "n_estimators": [100, 300, 500],
+#     "criterion": ["gini", "entropy"],
+#     "max_depth": [20, 25, 30],
+#     "min_samples_leaf": [2, 3, 5],
+# }
+
+# # create the GridSearchCV object
+# grid_search_forest = GridSearchCV(
+#     forest, param_grid, cv=5, scoring="accuracy", n_jobs=-1
+# )
+
+# # fit the grid search to the data
+# grid_search_forest.fit(X_train_f, y_train)
+
+
+# # print the best parameters and the corresponding accuracy
+# print("Best Parameters: ", grid_search_forest.best_params_)
+# print("Best Accuracy: ", grid_search_forest.best_score_)
+
+# # get the best model
+# best_forest = grid_search_forest.best_estimator_
+
+# y_predict = best_forest.predict(X_test_f)
+
+# -------------------------------------------------------------
+
+rfc.fit(X_train_f, y_train)
+rfc.base_estimator_
+rfc.feature_importances_
+rfc.classes_
+
+y_predict = rfc.predict(X_test_f)
+y_predict_proba = rfc.predict_proba(X_test_f)
+
+# classification_report
+print(classification_report(y_test, y_predict))
+
 """
               precision    recall  f1-score   support
 
-           0       0.72      1.00      0.84        70
-           1       0.80      0.12      0.22        32
-           2       0.88      0.88      0.88        34
+           0       0.74      0.94      0.83        70
+           1       0.58      0.22      0.32        32
+           2       0.89      0.91      0.90        34
 
     accuracy                           0.76       136
-   macro avg       0.80      0.67      0.65       136
-weighted avg       0.78      0.76      0.70       136
+   macro avg       0.74      0.69      0.68       136
+weighted avg       0.74      0.76      0.73       136
 
-ROC AUC scores: 
-{0: 0.8307359307359308, 1: 0.6283052884615384, 2: 0.9504036908881199}
+
 """
+
+
+# ROC AUC
+n_classes = 3
+y_test_bin = label_binarize(y_test, classes=[0, 1, 2])
+fpr = dict()
+tpr = dict()
+roc_auc = dict()
+for i in range(n_classes):
+    fpr[i], tpr[i], _ = roc_curve(y_test_bin[:, i], y_predict_proba[:, i])
+    roc_auc[i] = roc_auc_score(y_test_bin[:, i], y_predict_proba[:, i])
+
+print("ROC AUC scores: ", roc_auc)
+# ROC AUC scores:
+# {0: 0.819047619047619, 1: 0.6604567307692307, 2: 0.9483852364475203}
+
+
+classes = rfc.classes_
+cm = confusion_matrix(y_test, y_predict, labels=classes)
+
+plot_confusion_matrix(cm, classes)
+
+# ----------------------------------------------------------------
+# save model
+# ----------------------------------------------------------------
+joblib.dump(rfc, "../../models/RFC_model.pkl")
