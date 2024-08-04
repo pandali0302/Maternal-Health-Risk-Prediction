@@ -450,6 +450,7 @@ class ClassificationAlgorithms:
         min_samples_leaf=5,
         criterion="gini",
         print_model_details=False,
+        radom_state=42,
         gridsearch=True,
     ):
 

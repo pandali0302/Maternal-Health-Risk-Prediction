@@ -1,14 +1,5 @@
 """
-分类报告：
-- 模型在高风险和低风险类别上的表现较好，但在中风险类别上的识别能力较差。需要采取措施平衡数据、优化特征和调整模型，以提高中风险类别的识别性能。通过交叉验证和特征选择，可以进一步验证和提升模型的整体表现。
-
-    中风险(1)类别的表现不佳：
-
-    精准率为0.71,召回率仅为0.16,F1得分为0.26,表明模型在中风险类别上的识别能力较差。
-    建议：使用过采样(如MOTE)或欠采样等数据平衡技术,增加中风险样本的数量。还可以尝试增加新的特征或调整模型超参数。
-
-混淆矩阵：
-- 中风险(1)类别的表现：中风险(1)的样本中,只有5个被正确分类,23个被误分类为低风险(0),4个被误分类为高风险(2)。模型在中风险类别上的表现很差。
+模型在中风险类别上的表现很差。
 
     重采样技术
         过采样:如SMOTE(Synthetic Minority Over-sampling Technique)，用于增加中风险(1)样本的数量。
@@ -141,12 +132,12 @@ feature_set_4 = [
 ]
 selected_features = [
     "SystolicBP_BS_interaction",
-    "BodyTemp",
+    "BodyTemp_squared",
     "BS_HeartRate_interaction",
     "IsHighBS",
-    "BodyTemp_squared",
+    "BodyTemp",
     "BS_BodyTemp_interaction",
-    "SystolicBP",
+    "SystolicBP_BodyTemp_interaction",
     "BP_sqrt",
 ]
 
@@ -155,13 +146,12 @@ selected_features = [
 # Define class weights
 # ----------------------------------------------------------------
 class_weight = {0: 0.2, 1: 0.4, 2: 0.4}
-X_f = X[feature_set_2]
+X_train_f = X_train_scaled_df[feature_set_4]
+X_test_f = X_test_scaled_df[feature_set_4]
 
 
 # ----------------------------------------------------------------
 # Random Forest Classifier
-# ----------------------------------------------------------------
-
 # ----------------------------------------------------------------
 # define hyperparameter grid for tuning
 # ----------------------------------------------------------------
@@ -180,6 +170,14 @@ param_grid = {"min_samples_leaf": np.arange(1, 1 + 10, 1)}  # complexity -> simp
 param_grid = {"max_features": np.arange(5, 30, 1)}  # both direction
 
 param_grid = {"criterion": ["gini", "entropy"]}  # depends on
+
+tuned_parameters = [
+                {
+                    "min_samples_leaf": [2, 10, 50, 100, 200],
+                    "n_estimators": [10, 50, 100],
+                    # "max_depth": [1, 3, 5, 10, 20],
+                    "criterion": ["gini", "entropy"],
+                }]
 # ----------------------------------------------------------------
 # Tuning n_estimators
 score_estimator = []
@@ -187,29 +185,29 @@ for i in range(0, 200, 10):
     rfc = RandomForestClassifier(
         n_estimators=i + 1, class_weight=class_weight, random_state=42, n_jobs=-1
     )
-    score = cross_val_score(rfc, X_f, y, cv=10).mean()
+    score = cross_val_score(rfc, X_train_f, y_train, cv=5).mean()
     score_estimator.append(score)
 print(max(score_estimator), (score_estimator.index(max(score_estimator)) * 10) + 1)
-plt.figure(figsize=[20, 5])
+plt.figure(figsize=[20, 8])
 plt.plot(range(1, 201, 10), score_estimator)
 plt.show()
-# 0.6409178743961352 121
+# 0.6583829365079366 111
 
 score_estimator = []
-for i in range(120, 125):
+for i in range(110,121 ):
     rfc = RandomForestClassifier(
         n_estimators=i + 1, class_weight=class_weight, random_state=42, n_jobs=-1
     )
-    score = cross_val_score(rfc, X_f, y, cv=10).mean()
+    score = cross_val_score(rfc, X_train_f, y_train, cv=5).mean()
     score_estimator.append(score)
 print(
     max(score_estimator),
-    ([*range(120, 125)][score_estimator.index(max(score_estimator))]) + 1,
+    ([*range(110, 121)][score_estimator.index(max(score_estimator))]) + 1,
 )
-plt.figure(figsize=[20, 5])
-plt.plot(range(120, 125), score_estimator)
+plt.figure(figsize=[20, 8])
+plt.plot(range(110, 121), score_estimator)
 plt.show()
-# 0.6409178743961352 121
+# 0.6615575396825397 117
 
 
 # ----------------------------------------------------------------
@@ -217,57 +215,104 @@ plt.show()
 param_grid = {"max_depth": np.arange(1, 20, 1)}  # for small dataset, try 1~10, or 1~20
 
 rfc = RandomForestClassifier(
-    n_estimators=121, class_weight=class_weight, random_state=42, n_jobs=-1
+    n_estimators=117, 
+    class_weight=class_weight, 
+    random_state=42, 
+    n_jobs=-1
 )
-GS = GridSearchCV(rfc, param_grid, cv=10)
-GS.fit(X_f, y)
-GS.best_params_  # 3
-GS.best_score_  # 0.7274879227053141
+GS = GridSearchCV(rfc, param_grid, cv=5, scoring="accuracy")
+GS.fit(X_train_f, y_train)
+GS.best_params_  # 4
+GS.best_score_  # 0.7059027777777778
 
 # ----------------------------------------------------------------
 # Tuning min_samples_leaf
-param_grid = {"min_samples_leaf": np.arange(1, 1 + 10, 1)}
+param_grid = {"min_samples_leaf": np.arange(1, 1 + 20, 1)}
 
 rfc = RandomForestClassifier(
-    n_estimators=121, max_depth=3, class_weight=class_weight, random_state=42, n_jobs=-1
+    n_estimators=117, 
+    max_depth=4, 
+    class_weight=class_weight, 
+    random_state=42, 
+    n_jobs=-1
 )
 
-GS = GridSearchCV(rfc, param_grid, cv=10)
-GS.fit(X_f, y)
-GS.best_params_  # 1 , will keep default
-GS.best_score_
-# 0.7274879227053141
+GS = GridSearchCV(rfc, param_grid, cv=5, scoring="accuracy")
+GS.fit(X_train_f, y_train)
+GS.best_params_  # 10 
+GS.best_score_  # 0.715376984126984
+
+
+# # Tuning min_samples_split
+# param_grid = {"min_samples_split": np.arange(2, 2 + 20, 1)}
+# rfc = RandomForestClassifier(
+#     n_estimators=53,
+#     max_depth=4,
+#     min_samples_leaf=10,
+#     class_weight=class_weight,
+#     random_state=42,
+#     n_jobs=-1,
+# )
+# GS = GridSearchCV(rfc, param_grid, cv=5, scoring="accuracy")
+# GS.fit(X_train_f, y_train)
+# GS.best_params_  #
+# GS.best_score_
+
+# ----------------------------------------------------------------
+# Tuning max_features
+param_grid = {"max_features": np.arange(1, 6, 1)}
+
+rfc = RandomForestClassifier(
+    n_estimators=117,
+    max_depth=4,
+    min_samples_leaf=10,
+    class_weight=class_weight,
+    random_state=42,
+    n_jobs=-1,
+)
+GS = GridSearchCV(rfc, param_grid, cv=5, scoring="accuracy")
+GS.fit(X_train_f, y_train)
+GS.best_params_  # 2 keep default
+GS.best_score_  # 0.715376984126984
 
 # ----------------------------------------------------------------
 # Tuning criterion
 param_grid = {"criterion": ["gini", "entropy"]}
 rfc = RandomForestClassifier(
-    n_estimators=121, max_depth=3, class_weight=class_weight, random_state=42, n_jobs=-1
+    n_estimators=117, 
+    max_depth=4, 
+    min_samples_leaf=10, 
+    # max_features=2,
+    class_weight=class_weight, 
+    random_state=42, 
+    n_jobs=-1,
 )
-GS = GridSearchCV(rfc, param_grid, cv=10)
-GS.fit(X_f, y)
+GS = GridSearchCV(rfc, param_grid, cv=5, scoring="accuracy")
+GS.fit(X_train_f, y_train)
 GS.best_params_  # gini; keep default
 GS.best_score_
-# 0.7274879227053141
+# 0.715376984126984
 
 
 # ----------------------------------------------------------------
 # Train model with the best params
 rfc = RandomForestClassifier(
-    n_estimators=121,
-    max_depth=3,
+    n_estimators=117,
+    max_depth=4,
+    min_samples_leaf=10,
+    # max_features=2,
     class_weight=class_weight,
     random_state=42,
     n_jobs=-1,
 )
 
-rfc.fit(X_train_scaled_df[feature_set_2], y_train)
+rfc.fit(X_train_f, y_train)
 rfc.base_estimator_
 rfc.feature_importances_
 rfc.classes_
 
-y_predict = rfc.predict(X_test_scaled_df[feature_set_2])
-y_predict_proba = rfc.predict_proba(X_test_scaled_df[feature_set_2])
+y_predict = rfc.predict(X_test_f[feature_set_4])
+y_predict_proba = rfc.predict_proba(X_test_f[feature_set_4])
 
 # ----------------------------------------------------------------
 # Define metirics and evaluation function
@@ -277,13 +322,14 @@ print(classification_report(y_test, y_predict))
 """
               precision    recall  f1-score   support
 
-           0       0.74      0.97      0.84        70
-           1       0.73      0.25      0.37        32
-           2       0.88      0.85      0.87        34
+           0       0.74      0.96      0.83        70
+           1       0.60      0.19      0.29        32
+           2       0.89      0.91      0.90        34
 
-    accuracy                           0.77       136
-   macro avg       0.78      0.69      0.69       136
-weighted avg       0.77      0.77      0.74       136
+    accuracy                           0.76       136
+   macro avg       0.74      0.69      0.67       136
+weighted avg       0.74      0.76      0.72       136
+
 """
 
 # ROC AUC
@@ -298,7 +344,7 @@ for i in range(n_classes):
 
 print("ROC AUC scores: ", roc_auc)
 # ROC AUC scores:
-# {0: 0.8274891774891775, 1: 0.6415264423076923, 2: 0.9824106113033448}
+# {0: 0.8086580086580086, 1: 0.6796875, 2: 0.9449250288350635}
 
 
 classes = rfc.classes_
@@ -353,6 +399,8 @@ plot_confusion_matrix(cm, classes)
 
 joblib.dump(rfc, "../../models/RFC_model.pkl")
 
-# ----------------------------------------------------------------
-# XGBoost Classifier
-# ----------------------------------------------------------------
+
+"""
+
+
+"""

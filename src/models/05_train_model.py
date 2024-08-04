@@ -9,7 +9,7 @@ import seaborn as sns
 
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, label_binarize
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFE
@@ -191,12 +191,12 @@ selected_features, ordered_features, ordered_scores = selector.forward_selection
 
 selected_features = [
     "SystolicBP_BS_interaction",
-    "BodyTemp",
+    "BodyTemp_squared",
     "BS_HeartRate_interaction",
     "IsHighBS",
-    "BodyTemp_squared",
+    "BodyTemp",
     "BS_BodyTemp_interaction",
-    "SystolicBP",
+    "SystolicBP_BodyTemp_interaction",
     "BP_sqrt",
 ]
 
@@ -266,7 +266,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
             selected_scaled_train_X,
             y_train,
             selected_scaled_test_X,
-            gridsearch=False,
+            gridsearch=True,
         )
         performance_test_nn += accuracy_score(y_test, class_test_y)
 
@@ -277,7 +277,10 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
             class_train_prob_y,
             class_test_prob_y,
         ) = learner.random_forest(
-            selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=False,
+            selected_scaled_train_X,
+            y_train,
+            selected_scaled_test_X,
+            gridsearch=True,
         )
         performance_test_rf += accuracy_score(y_test, class_test_y)
 
@@ -292,7 +295,10 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         class_train_prob_y,
         class_test_prob_y,
     ) = learner.k_nearest_neighbor(
-        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=False,
+        selected_scaled_train_X,
+        y_train,
+        selected_scaled_test_X,
+        gridsearch=True,
     )
     performance_test_knn = accuracy_score(y_test, class_test_y)
 
@@ -303,7 +309,10 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         class_train_prob_y,
         class_test_prob_y,
     ) = learner.decision_tree(
-        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=False,
+        selected_scaled_train_X,
+        y_train,
+        selected_scaled_test_X,
+        gridsearch=True,
     )
     performance_test_dt = accuracy_score(y_test, class_test_y)
 
@@ -335,7 +344,7 @@ for i, f in zip(range(len(possible_feature_sets)), feature_names):
         class_train_prob_y,
         class_test_prob_y,
     ) = learner.support_vector_machine_without_kernel(
-        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=False
+        selected_scaled_train_X, y_train, selected_scaled_test_X, gridsearch=True
     )
     performance_test_svm = accuracy_score(y_test, class_test_y)
 
@@ -376,9 +385,8 @@ plt.show()
 """
 Random forest perform best with all feature sets. Choose Random forest classifier for further tuning.
 
-RF	selected_features	0.786765
-RF	feature set 3	0.779412
 RF	feature set 4	0.772059
+RF	feature set 2	0.764706
 """
 
 # --------------------------------------------------------------
@@ -390,12 +398,40 @@ RF	feature set 4	0.772059
     class_train_prob_y,
     class_test_prob_y,
 ) = learner.random_forest(
-    X_train[feature_set_4], y_train, X_test[feature_set_4], gridsearch=False
+    X_train[feature_set_4], y_train, X_test[feature_set_4], gridsearch=True
 )
 
 accuracy = accuracy_score(y_test, class_test_y)
 print(classification_report(y_test, class_test_y))
+"""
+              precision    recall  f1-score   support
 
+           0       0.72      1.00      0.84        70
+           1       0.80      0.12      0.22        32
+           2       0.88      0.88      0.88        34
+
+    accuracy                           0.76       136
+   macro avg       0.80      0.67      0.65       136
+weighted avg       0.78      0.76      0.70       136
+
+"""
+
+# ROC AUC
+n_classes = 3
+y_test_bin = label_binarize(y_test, classes=[0, 1, 2])
+fpr = dict()
+tpr = dict()
+roc_auc = dict()
+for i in range(n_classes):
+    fpr[i], tpr[i], _ = roc_curve(y_test_bin[:, i], class_test_prob_y.to_numpy()[:, i])
+    roc_auc[i] = roc_auc_score(y_test_bin[:, i], class_test_prob_y.to_numpy()[:, i])
+
+print("ROC AUC scores: ", roc_auc)
+# ROC AUC scores:
+# {0: 0.8307359307359308, 1: 0.6283052884615384, 2: 0.9504036908881199}
+
+
+# Confusion matrix
 classes = class_test_prob_y.columns
 cm = confusion_matrix(y_test, class_test_y, labels=classes)
 
@@ -449,7 +485,7 @@ plot_confusion_matrix(cm, classes)
 
     中风险(1)类别的表现不佳：
 
-    精准率为0.71,召回率仅为0.16,F1得分为0.26,表明模型在中风险类别上的识别能力较差。
+    精准率为0.80,召回率仅为0.12,F1得分为0.22,表明模型在中风险类别上的识别能力较差。
     建议：使用过采样(如MOTE)或欠采样等数据平衡技术,增加中风险样本的数量。还可以尝试增加新的特征或调整模型超参数。
 
 混淆矩阵：
@@ -476,4 +512,19 @@ plot_confusion_matrix(cm, classes)
     阈值调整:
         调整分类阈值，可能会提高中风险(1)类别的识别率。
 
+"""
+
+"""
+              precision    recall  f1-score   support
+
+           0       0.72      1.00      0.84        70
+           1       0.80      0.12      0.22        32
+           2       0.88      0.88      0.88        34
+
+    accuracy                           0.76       136
+   macro avg       0.80      0.67      0.65       136
+weighted avg       0.78      0.76      0.70       136
+
+ROC AUC scores: 
+{0: 0.8307359307359308, 1: 0.6283052884615384, 2: 0.9504036908881199}
 """

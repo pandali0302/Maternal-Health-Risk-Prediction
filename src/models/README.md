@@ -40,3 +40,38 @@ The order of these steps can influence the final model performance and efficienc
 ### Model deployment
     - Model Deployment: Deploy the model to a production environment, such as a web application, a mobile app or IoT device.
     - Model Monitoring: Continuously monitor the model's performance and update it as needed.
+
+
+
+"""
+              precision    recall  f1-score   support
+
+           0       0.72      1.00      0.84        70
+           1       0.80      0.12      0.22        32
+           2       0.88      0.88      0.88        34
+
+    accuracy                           0.76       136
+   macro avg       0.80      0.67      0.65       136
+weighted avg       0.78      0.76      0.70       136
+
+ROC AUC scores: 
+{0: 0.8307359307359308, 1: 0.6283052884615384, 2: 0.9504036908881199}
+
+"""
+
+### After Hyperparameters Tuning:
+"""
+              precision    recall  f1-score   support
+
+           0       0.74      0.96      0.83        70
+           1       0.60      0.19      0.29        32
+           2       0.89      0.91      0.90        34
+
+    accuracy                           0.76       136
+   macro avg       0.74      0.69      0.67       136
+weighted avg       0.74      0.76      0.72       136
+
+ROC AUC scores:
+{0: 0.8086580086580086, 1: 0.6796875, 2: 0.9449250288350635} 
+
+"""
