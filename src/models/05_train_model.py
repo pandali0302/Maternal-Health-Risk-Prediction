@@ -597,7 +597,6 @@ weighted avg       0.74      0.76      0.73       136
 
 """
 
-
 # ROC AUC
 n_classes = 3
 y_test_bin = label_binarize(y_test, classes=[0, 1, 2])
@@ -622,3 +621,6 @@ plot_confusion_matrix(cm, classes)
 # save model
 # ----------------------------------------------------------------
 joblib.dump(rfc, "../../models/RFC_model.pkl")
+
+# load model
+# rfc = joblib.load("../../models/RFC_model.pkl")
