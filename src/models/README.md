@@ -45,7 +45,7 @@ The order of these steps can influence the final model performance and efficienc
 
 The model performs well on high-risk and low-risk categories but has poor identification ability for the medium-risk category. Measures need to be taken to balance the data, optimize features, and adjust the model to improve the identification performance of the medium-risk category. 
 
-
+Classification Report:
               precision    recall  f1-score   support
 
            0       0.73      0.99      0.84        70
@@ -63,8 +63,7 @@ ROC AUC scores:
 
 
 After setting class_weight param:
-
-
+Classification Report:
               precision    recall  f1-score   support
 
            0       0.74      0.94      0.83        70
@@ -77,3 +76,20 @@ weighted avg       0.74      0.76      0.73       136
 
 ROC AUC scores:
 {0: 0.819047619047619, 1: 0.6604567307692307, 2: 0.9483852364475203}
+
+
+
+XGBoost model:
+Classification Report:
+               precision    recall  f1-score   support
+
+           0       0.73      0.99      0.84        70
+           1       0.67      0.19      0.29        32
+           2       0.88      0.82      0.85        34
+
+    accuracy                           0.76       136
+   macro avg       0.76      0.67      0.66       136
+weighted avg       0.75      0.76      0.71       136
+
+ROC AUC scores:  
+{0: 0.8085497835497835, 1: 0.6227463942307692, 2: 0.9313725490196078}
