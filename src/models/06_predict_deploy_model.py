@@ -73,12 +73,13 @@ joblib.dump(scaler, "scaler.pkl")
 # ----------------------------------------------------------------
 """
 # 选择合适的边缘设备，例如树莓派、NVIDIA Jetson Nano 等，安装必要的软件和库：
-#? ===============================购买
+#? ===============================选购
 - Raspberry Pi 4  (4GB RAM)
 - (microSD card, 16GB) 用于存储操作系统和应用程序
 
 #? ===============================安装操作系
-- 使用 Raspberry Pi Imager 将 Raspbian 操作系统（推荐 Raspberry Pi OS with desktop）写入 microSD 卡。然后，将 microSD 卡插入 Raspberry Pi，并连接到显示器、键盘和鼠标。
+- 使用 Raspberry Pi Imager 将 Raspbian 操作系统（推荐 Raspberry Pi OS with desktop）写入 microSD 卡。
+然后，将 microSD 卡插入 Raspberry Pi，并连接到显示器、键盘和鼠标。
 
 #? ===============================更新系统和安装必要的软件
 - 引导进入 Raspbian 系统后，打开终端并运行以下命令进行系统更新：
@@ -99,17 +100,24 @@ import RPi.GPIO as GPIO
 import time
 
 # GPIO 端口设置
-HEART_RATE_PIN = 17
 GPIO.setmode(GPIO.BCM)
+HEART_RATE_PIN = 17
+BLOOD_SUGAR_PIN = 27
 GPIO.setup(HEART_RATE_PIN, GPIO.IN)
+GPIO.setup(BLOOD_SUGAR_PIN, GPIO.IN)  
 
 def read_heart_rate():
     return GPIO.input(HEART_RATE_PIN)
 
+ def read_blood_sugar():
+    return GPIO.input(BLOOD_SUGAR_PIN)
+
+
 try:
     while True:
         heart_rate = read_heart_rate()
-        print(f"Heart Rate: {heart_rate}")
+        blood_sugar = read_blood_sugar()
+        print(f"Heart Rate: {heart_rate}, Blood Sugar: {blood_sugar}")
         time.sleep(1)
 except KeyboardInterrupt:
     GPIO.cleanup()
@@ -248,10 +256,113 @@ send_alert(predicted_risk_level)
 # 通过应用通知发送警报 Firebase Cloud Messaging (FCM) 或者 OneSignal
 
 
-# ----------------------------------------------------------------
-# 总结
-# ----------------------------------------------------------------
 """
 将训练好的随机森林模型部署到边缘设备上，并利用从IoT设备收集的数据进行实时预测。
 这种解决方案可以有效地应用于实时监测和早期预警系统，为孕妇提供更好的医疗保障。
 """
+
+# ----------------------------------------------------------------
+# 实现一个闭环的MLOps流程，从数据采集到模型训练、部署、监控和再训练都在云服务平台和Raspberry Pi之间协同工作。
+# ----------------------------------------------------------------
+
+"""
+
+数据监控与存储
+
+    1. 数据采集与预处理：
+    - 使用Raspberry Pi收集传感器数据，进行必要的预处理，如归一化、去噪等。
+
+    2. 数据上传：
+    - 利用Raspberry Pi的网络连接功能，通过MQTT或其他协议将数据定期上传到云服务平台。例如，使用Paho-MQTT库与阿里云物联网平台通信。
+    - 选择一个支持机器学习服务的云平台，如AWS、Google Cloud Platform、Microsoft Azure或阿里云。
+
+    4. 模型监控：
+    - 在云平台上设置模型性能监控，使用工具如TensorBoard、Prometheus和Grafana等来实时监控模型的关键指标。
+
+    5. 模型再训练触发条件：
+    - 根据监控结果设定阈值，当模型性能低于预设阈值时自动触发再训练流程。
+
+    6. 数据管理：
+    - 确保云平台上有足够的计算资源和存储空间来处理和存储上传的数据。
+
+    7. 自动化再训练流程：
+    - 开发自动化脚本，当模型需要更新时，自动从云平台获取最新数据，重新训练模型。
+
+    8. 模型部署：
+    - 训练完成的新模型应经过验证后，自动部署回Raspberry Pi，替换旧模型。
+
+    9. 版本控制与回滚：
+    - 使用版本控制系统管理模型的不同版本，确保可以回滚到之前的版本，如果新模型表现不佳。
+
+    10. 安全性：
+        - 确保数据传输和存储过程安全，使用加密和安全认证机制。
+
+    11. 成本管理：
+        - 监控云服务使用情况，以控制成本。
+
+    12. 用户界面：
+        - 提供一个用户界面，用于在云平台上监控模型状态、触发训练和部署新模型。
+
+    13. 文档与支持：
+        - 准备详细的文档和日志记录，以便于问题排查和用户支持。
+
+
+"""
+
+# ----------------------------------------------------------------
+# 实时数据监控 与数据存储
+# ----------------------------------------------------------------
+# 可以使用 MQTT 协议或 HTTP 请求将数据发送到服务器。
+import paho.mqtt.client as mqtt
+import json
+
+
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code " + str(rc))
+
+
+client = mqtt.Client()
+client.on_connect = on_connect
+client.connect("broker.hivemq.com", 1883, 60)
+
+
+def send_data(data):
+    payload = json.dumps(data)
+    client.publish("health/data", payload)
+
+# 使用云存储服务（如 AWS S3、Azure Blob Storage）或数据库（如 InfluxDB、MongoDB）存储采集的数据，以便于后续的分析和模型再训练
+
+# ----------------------------------------------------------------
+# 模型再训练：
+# ----------------------------------------------------------------
+# 使用云端计算资源（如 AWS EC2、Azure ML）进行模型再训练，以减轻 Raspberry Pi 的计算负担。
+# 通过远程脚本或 API 调用触发再训练过程。
+import boto3
+
+s3 = boto3.client("s3")
+ec2 = boto3.client("ec2")
+
+
+def trigger_retraining():
+    # 上传新数据到 S3
+    s3.upload_file("new_data.csv", "my-bucket", "new_data.csv")
+
+    # 启动 EC2 实例进行再训练
+    ec2.start_instances(InstanceIds=["i-1234567890abcdef0"])
+
+
+# ----------------------------------------------------------------
+# 模型部署：
+# ----------------------------------------------------------------
+# 通过远程更新 Raspberry Pi 上的模型文件，确保设备使用最新的模型进行预测。
+import requests
+
+
+def update_model():
+    url = "https://my-bucket.s3.amazonaws.com/model.pkl"
+    response = requests.get(url)
+    with open("model.pkl", "wb") as f:
+        f.write(response.content)
+
+
+update_model()
