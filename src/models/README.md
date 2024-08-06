@@ -42,9 +42,33 @@ The order of these steps can influence the final model performance and efficienc
     - Model Monitoring: Continuously monitor the model's performance and update it as needed.
 
 
+### Model Performance Report
+- Benchmark Model (RFC): 
+              precision    recall  f1-score   support
 
-The model performs well on high-risk and low-risk categories but has poor identification ability for the medium-risk category. Measures need to be taken to balance the data, optimize features, and adjust the model to improve the identification performance of the medium-risk category. 
+           0       0.75      0.83      0.79        70
+           1       0.35      0.25      0.29        32
+           2       0.72      0.76      0.74        34
 
+    accuracy                           0.68       136
+   macro avg       0.61      0.61      0.61       136
+weighted avg       0.65      0.68      0.66       136
+
+
+- After feature selection (use Recursive Feature Elimination (RFE) ):
+precision    recall  f1-score   support
+
+           0       0.73      0.87      0.80        70
+           1       0.44      0.25      0.32        32
+           2       0.80      0.82      0.81        34
+
+    accuracy                           0.71       136
+   macro avg       0.66      0.65      0.64       136
+weighted avg       0.68      0.71      0.69       136
+
+
+
+- After hyperparameter tuning:
 Classification Report:
               precision    recall  f1-score   support
 
@@ -61,8 +85,10 @@ ROC AUC scores:
 {0: 0.8153679653679653, 1: 0.6442307692307692, 2: 0.9587658592848904}
 
 
+The model performs well on high-risk and low-risk categories but has poor identification ability for the medium-risk category. Measures need to be taken to balance the data, optimize features, and adjust the model to improve the identification performance of the medium-risk category. 
 
-After setting class_weight param:
+
+- After setting class_weight param:
 Classification Report:
               precision    recall  f1-score   support
 
@@ -79,7 +105,7 @@ ROC AUC scores:
 
 
 
-XGBoost model:
+- XGBoost model:
 Classification Report:
                precision    recall  f1-score   support
 

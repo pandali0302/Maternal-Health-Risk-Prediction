@@ -51,6 +51,7 @@ df = data.copy()
 X = df.drop("RiskLevel", axis=1)
 y = df["RiskLevel"]
 
+
 # ----------------------------------------------------------------
 # Feature Selection
 # ----------------------------------------------------------------
@@ -179,6 +180,7 @@ X_test_scaled_df = pd.DataFrame(
     X_test_scaled, index=X_test.index, columns=X_test.columns
 )
 
+
 # --------------------------------------------------------------
 # Perform forward feature selection using simple decision tree
 # --------------------------------------------------------------
@@ -220,6 +222,32 @@ feature_set_2 = list(set(basic_features + poly_square_features + interaction_fea
 feature_set_3 = list(set(feature_set_2 + sqrt_features))
 feature_set_4 = list(set(selected_features_rfe))
 
+# ----------------------------------------------------------------
+#  Build a simple benchmark model for performance comparison
+# ----------------------------------------------------------------
+bench_model = RandomForestClassifier(random_state=42)
+bench_model.fit(X_train_scaled_df[feature_set_1], y_train)
+
+# Make predictions on the test data
+bench_preds = bench_model.predict(X_test_scaled_df[feature_set_1])
+
+accuracy = accuracy_score(y_test, bench_preds)  # 0.6764705882352942
+print(confusion_matrix(y_test, bench_preds))
+print(classification_report(y_test, bench_preds))
+
+"""
+Benchmark Model (RFC): 
+              precision    recall  f1-score   support
+
+           0       0.75      0.83      0.79        70
+           1       0.35      0.25      0.29        32
+           2       0.72      0.76      0.74        34
+
+    accuracy                           0.68       136
+   macro avg       0.61      0.61      0.61       136
+weighted avg       0.65      0.68      0.66       136
+
+"""
 
 # --------------------------------------------------------------
 # Grid search for best hyperparameters and model selection
@@ -385,11 +413,6 @@ plt.show()
 
 """
 Random forest perform best with all feature sets. Choose Random forest classifier for further tuning.
-
-RF	feature set 1	0.764706
-RF	selected_features	0.764706
-RF	feature set 3	0.764706
-RF	feature set 4	0.750000
 """
 
 # --------------------------------------------------------------
