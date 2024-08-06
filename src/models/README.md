@@ -119,3 +119,6 @@ weighted avg       0.75      0.76      0.71       136
 
 ROC AUC scores:  
 {0: 0.8085497835497835, 1: 0.6227463942307692, 2: 0.9313725490196078}
+
+
+ After balancing the data, optimizing features, and adjust the model to improve the accuray by 11.7% 
